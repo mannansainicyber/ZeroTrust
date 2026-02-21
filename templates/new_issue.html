@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% from 'macros.html' import flash_messages %}
+
+{% block title %} — New Issue{% endblock %}
+{% block extra_style %}
+body { display: flex; flex-direction: column; min-height: 100vh; }
+
+.topbar {
+  height: 52px; background: var(--white); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0;
+}
+.topbar-brand { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; margin-right: 8px; }
+.topbar-sep   { width: 1px; height: 18px; background: var(--border); }
+.topbar-crumb { font-size: 13px; color: var(--text2); }
+.topbar-space { flex: 1; }
+
+.page {
+  flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 16px;
+}
+.card {
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+  width: 100%; max-width: 520px; padding: 36px 40px; box-shadow: var(--shadow-md);
+  animation: fadeIn 0.2s ease;
+}
+.card-title   { font-size: 17px; font-weight: 600; margin-bottom: 24px; letter-spacing: -0.3px; }
+.card-title small {
+  display: block; font-size: 13px; font-weight: 400;
+  color: var(--text3); margin-top: 3px; letter-spacing: 0;
+}
+{% endblock %}
+
+{% block body %}
+<header class="topbar">
+  <span class="topbar-brand">ZeroTrust</span>
+  <div class="topbar-sep"></div>
+  <span class="topbar-crumb">New Issue</span>
+  <div class="topbar-space"></div>
+  <a href="{{ url_for('dashboard') }}" class="btn" style="font-size:13px;">← Back to issues</a>
+</header>
+
+<div class="page">
+  <div class="card">
+    <div class="card-title">
+      Create new issue
+      <small>It will be added to the active issues list.</small>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {{ flash_messages(messages) }}
+    {% endwith %}
+
+    <form method="POST">
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input class="form-input" type="text" name="title"
+               placeholder="Issue title…" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Project</label>
+        <input class="form-input" type="text" name="project"
+               placeholder="e.g. Design backlog" required list="project-list">
+        <datalist id="project-list">
+          {% for p in projects %}
+          <option value="{{ p }}">
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Priority</label>
+        <select class="form-select" name="priority">
+          <option value="High">High</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </div>
+
+      <div class="form-actions">
+        <a class="btn" href="{{ url_for('dashboard') }}">Cancel</a>
+        <button class="btn btn-primary" type="submit">Create issue</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

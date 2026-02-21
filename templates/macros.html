@@ -1,0 +1,44 @@
+{# ── macros.html ─────────────────────────────────────────
+   Import with: {% from 'macros.html' import priority_pill, project_badge, avatar %}
+   ─────────────────────────────────────────────────────── #}
+
+{# Render a coloured priority pill #}
+{% macro priority_pill(priority) %}
+<span class="priority-pill pri-{{ priority|lower }}">
+  <span class="pdot"></span>{{ priority }}
+</span>
+{% endmacro %}
+
+{# Resolve badge class from project name #}
+{% macro badge_class(project) %}
+{%- if project == 'Project 1' %}b-blue
+{%- elif project == 'Acme GTM' %}b-orange
+{%- elif 'launch' in project|lower %}b-green
+{%- elif 'design' in project|lower %}b-purple
+{%- elif 'bug' in project|lower %}b-red
+{%- else %}b-gray{%- endif %}
+{%- endmacro %}
+
+{# Render a project badge #}
+{% macro project_badge(project) %}
+<span class="badge {{ badge_class(project)|trim }}">{{ project }}</span>
+{% endmacro %}
+
+{# Render an avatar with initials #}
+{% macro avatar(label, size='') %}
+<div class="avatar {{ size }}">{{ label[0]|upper if label else '?' }}</div>
+{% endmacro %}
+
+{# Render a close-issue form button #}
+{% macro close_btn(issue_id) %}
+<form method="POST" action="/issues/{{ issue_id }}/close" style="display:inline">
+  <button class="act-btn close-btn" type="submit">Close</button>
+</form>
+{% endmacro %}
+
+{# Render flash messages #}
+{% macro flash_messages(messages) %}
+{% for cat, msg in messages %}
+<div class="flash flash-{{ cat }}">{{ msg }}</div>
+{% endfor %}
+{% endmacro %}

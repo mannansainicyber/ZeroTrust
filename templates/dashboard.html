@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+{% from 'macros.html' import priority_pill, project_badge, badge_class, avatar, close_btn %}
+
+{% block title %} — Issues{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">{% endblock %}
+
+{% block body %}
+<!-- ── TOPBAR ─────────────────────────────────────────── -->
+<header class="topbar">
+  <span class="topbar-brand">ZeroTrust</span>
+  <div class="topbar-sep"></div>
+  <span class="topbar-crumb">Issues</span>
+  <div class="topbar-space"></div>
+  <div class="topbar-user">
+    <div class="avatar avatar-lg">{{ email[0]|upper if email else '?' }}</div>
+    <span>{{ email }}</span>
+    <a href="{{ url_for('signout') }}"><button class="topbar-signout">Sign out</button></a>
+  </div>
+</header>
+
+<div class="shell">
+  <!-- ── SIDEBAR ──────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-section-label">Views</div>
+
+    <a href="{{ url_for('dashboard', status='active', view=current_view, priority=priority_filter, project=project_filter) }}"
+       class="nav-item {{ 'active' if current_status == 'active' and current_view not in ('board','timeline') else '' }}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      Active issues
+      {% if current_status == 'active' %}<span class="nav-badge">{{ issues|length }}</span>{% endif %}
+    </a>
+
+    <a href="{{ url_for('dashboard', status='closed', view='list') }}"
+       class="nav-item {{ 'active' if current_status == 'closed' else '' }}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9 11 12 14 22 4"/>
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+      </svg>
+      Closed
+      {% if current_status == 'closed' %}<span class="nav-badge">{{ issues|length }}</span>{% endif %}
+    </a>
+
+    <a href="{{ url_for('dashboard', status='active', view='board') }}"
+       class="nav-item {{ 'active' if current_view == 'board' else '' }}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      Board
+    </a>
+
+    <a href="{{ url_for('dashboard', status='active', view='timeline') }}"
+       class="nav-item {{ 'active' if current_view == 'timeline' else '' }}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      Timeline
+    </a>
+
+    <div class="sidebar-section-label" style="margin-top:8px;">Projects</div>
+    {% for p in projects %}
+    <a href="{{ url_for('dashboard', status='active', project=p, view=current_view) }}"
+       class="nav-item {{ 'active' if project_filter == p else '' }}">
+      <svg width="8" height="8" viewBox="0 0 8 8">
+        <circle cx="4" cy="4" r="3" fill="currentColor" opacity="0.4"/>
+      </svg>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">{{ p }}</span>
+    </a>
+    {% endfor %}
+  </aside>
+
+  <!-- ── MAIN ────────────────────────────────────────── -->
+  <main class="main">
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-title-group">
+        <div class="page-title">
+          {% if current_status == 'closed' %}Closed issues
+          {% elif current_view == 'board' %}Board
+          {% elif current_view == 'timeline' %}Timeline
+          {% else %}Active issues{% endif %}
+        </div>
+        <div class="page-meta">{{ issues|length }} issue{{ 's' if issues|length != 1 }}</div>
+      </div>
+      <div class="hdr-actions">
+        {% if current_status != 'closed' %}
+        <a href="{{ url_for('new_issue') }}">
+          <button class="btn btn-primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            New issue
+          </button>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Stats strip (only on list/grid views for active issues) -->
+    {% if current_status == 'active' and current_view in ('list', 'grid') %}
+    <div class="stats-strip">
+      <div class="stat-card anim-fade {{ 'active-filter' if not priority_filter }}"
+           onclick="location.href='{{ url_for('dashboard', status='active', view=current_view, project=project_filter) }}'">
+        <div class="stat-label">Total</div>
+        <div class="stat-value">{{ total_active }}</div>
+        <div class="stat-sub">active issues</div>
+      </div>
+      <div class="stat-card anim-fade-1 {{ 'active-filter' if priority_filter == 'High' }}"
+           onclick="location.href='{{ url_for('dashboard', status='active', priority='High', view=current_view, project=project_filter) }}'">
+        <div class="stat-label">High priority</div>
+        <div class="stat-value" style="color:var(--pri-high-fg);">{{ high_count }}</div>
+        <div class="stat-sub"><span class="stat-dot" style="background:var(--pri-high-dot);"></span>needs attention</div>
+      </div>
+      <div class="stat-card anim-fade-2 {{ 'active-filter' if priority_filter == 'Medium' }}"
+           onclick="location.href='{{ url_for('dashboard', status='active', priority='Medium', view=current_view, project=project_filter) }}'">
+        <div class="stat-label">Medium</div>
+        <div class="stat-value" style="color:var(--pri-medium-fg);">{{ medium_count }}</div>
+        <div class="stat-sub"><span class="stat-dot" style="background:var(--pri-medium-dot);"></span>in progress</div>
+      </div>
+      <div class="stat-card anim-fade-3 {{ 'active-filter' if priority_filter == 'Low' }}"
+           onclick="location.href='{{ url_for('dashboard', status='active', priority='Low', view=current_view, project=project_filter) }}'">
+        <div class="stat-label">Low</div>
+        <div class="stat-value" style="color:var(--pri-low-fg);">{{ low_count }}</div>
+        <div class="stat-sub"><span class="stat-dot" style="background:var(--pri-low-dot);"></span>low urgency</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Main content card -->
+    <div class="table-card anim-fade">
+
+      <!-- ── Toolbar (list + grid views) ── -->
+      {% if current_view in ('list', 'grid') %}
+      <div class="table-toolbar">
+        <div class="search-box">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Search issues..." oninput="filterIssues()">
+        </div>
+
+        <form method="GET" action="{{ url_for('dashboard') }}" id="filterForm" style="display:contents;">
+          <input type="hidden" name="status" value="{{ current_status }}">
+          <input type="hidden" name="view"   value="{{ current_view }}">
+
+          <label class="filter-chip {{ 'active' if priority_filter }}">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            <select name="priority" onchange="document.getElementById('filterForm').submit()">
+              <option value="">Priority</option>
+              <option value="High"   {{ 'selected' if priority_filter == 'High' }}>High</option>
+              <option value="Medium" {{ 'selected' if priority_filter == 'Medium' }}>Medium</option>
+              <option value="Low"    {{ 'selected' if priority_filter == 'Low' }}>Low</option>
+            </select>
+          </label>
+
+          <label class="filter-chip {{ 'active' if project_filter }}">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>
+            </svg>
+            <select name="project" onchange="document.getElementById('filterForm').submit()">
+              <option value="">Project</option>
+              {% for p in projects %}
+              <option value="{{ p }}" {{ 'selected' if project_filter == p }}>{{ p }}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          {% if priority_filter or project_filter %}
+          <a href="{{ url_for('dashboard', status=current_status, view=current_view) }}"
+             class="filter-chip clear-btn">✕ Clear</a>
+          {% endif %}
+        </form>
+
+        <div class="toolbar-sep"></div>
+
+        <div class="view-toggle">
+          <a href="{{ url_for('dashboard', status=current_status, view='list', priority=priority_filter, project=project_filter) }}"
+             class="view-btn {{ 'active' if current_view == 'list' }}" title="List view">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+            </svg>
+          </a>
+          <a href="{{ url_for('dashboard', status=current_status, view='grid', priority=priority_filter, project=project_filter) }}"
+             class="view-btn {{ 'active' if current_view == 'grid' }}" title="Grid view">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+            </svg>
+          </a>
+          <a href="{{ url_for('dashboard', status=current_status, view='board', priority=priority_filter, project=project_filter) }}"
+             class="view-btn {{ 'active' if current_view == 'board' }}" title="Board view">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="5" height="18"/><rect x="10" y="3" width="5" height="14"/>
+              <rect x="17" y="3" width="5" height="10"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- ══ LIST VIEW ══════════════════════════════════ -->
+      {% if current_view == 'list' %}
+      <div class="table-scroll">
+        {% if issues %}
+        <table id="issueTable">
+          <thead>
+            <tr>
+              <th class="sortable" style="width:80px"  data-col="0">Ref</th>
+              <th class="sortable"                     data-col="1">Title</th>
+              <th class="sortable" style="width:148px" data-col="2">Project</th>
+              <th class="sortable" style="width:100px" data-col="3">Priority</th>
+              <th style="width:72px">Date</th>
+              <th style="width:44px">By</th>
+              <th style="width:84px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for issue in issues %}
+            <tr>
+              <td><span class="col-ref">{{ issue.ref }}</span></td>
+              <td><span class="col-title">{{ issue.title }}</span></td>
+              <td>{{ project_badge(issue.project) }}</td>
+              <td>{{ priority_pill(issue.priority) }}</td>
+              <td><span class="date-cell">{{ issue.date }}</span></td>
+              <td>
+                <div class="avatar">
+                  {% if issue.owner_id %}{{ email[0]|upper if email else '?' }}{% else %}?{% endif %}
+                </div>
+              </td>
+              <td>
+                <div class="row-actions">
+                  {% if current_status == 'active' %}{{ close_btn(issue.id) }}{% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty">
+          No {{ current_status }} issues{% if priority_filter %} with <strong>{{ priority_filter }}</strong> priority{% endif %}{% if project_filter %} in <strong>{{ project_filter }}</strong>{% endif %}.
+          {% if current_status == 'active' %}<br><a href="{{ url_for('new_issue') }}">Create the first one →</a>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- ══ GRID VIEW ═══════════════════════════════════ -->
+      {% elif current_view == 'grid' %}
+      <div class="grid-scroll">
+        {% if issues %}
+        <div class="issues-grid" id="issueGrid">
+          {% for issue in issues %}
+          <div class="issue-card"
+               data-text="{{ issue.title|lower }} {{ issue.project|lower }} {{ issue.ref|lower }}">
+            <div class="card-head">
+              <div class="card-title">{{ issue.title }}</div>
+              {{ priority_pill(issue.priority) }}
+            </div>
+            <div>{{ project_badge(issue.project) }}</div>
+            <div class="card-foot">
+              <span class="col-ref">{{ issue.ref }}</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="date-cell">{{ issue.date }}</span>
+                {% if current_status == 'active' %}
+                <div class="card-actions">{{ close_btn(issue.id) }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty">No issues found.{% if current_status == 'active' %}<br><a href="{{ url_for('new_issue') }}">Create the first one →</a>{% endif %}</div>
+        {% endif %}
+      </div>
+
+      <!-- ══ BOARD VIEW ══════════════════════════════════ -->
+      {% elif current_view == 'board' %}
+      <div class="table-toolbar">
+        <span style="font-size:13px;color:var(--text2);">Grouped by priority</span>
+        <div class="toolbar-sep"></div>
+        <div class="view-toggle">
+          <a href="{{ url_for('dashboard', status='active', view='list') }}" class="view-btn" title="List">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+            </svg>
+          </a>
+          <a href="{{ url_for('dashboard', status='active', view='grid') }}" class="view-btn" title="Grid">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+            </svg>
+          </a>
+          <a href="{{ url_for('dashboard', status='active', view='board') }}" class="view-btn active" title="Board">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="5" height="18"/><rect x="10" y="3" width="5" height="14"/>
+              <rect x="17" y="3" width="5" height="10"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+      <div class="board-scroll">
+        <div class="board-columns">
+          {% for priority, dot_color in [('High','var(--pri-high-dot)'),('Medium','var(--pri-medium-dot)'),('Low','var(--pri-low-dot)')] %}
+          {% set col_issues = issues|selectattr('priority','equalto',priority)|list %}
+          <div class="board-col">
+            <div class="board-col-head">
+              <div style="display:flex;align-items:center;gap:7px;">
+                <span style="width:8px;height:8px;border-radius:50%;background:{{ dot_color }};display:inline-block;"></span>
+                {{ priority }}
+              </div>
+              <span class="nav-badge">{{ col_issues|length }}</span>
+            </div>
+            <div class="board-col-body">
+              {% for issue in col_issues %}
+              <div class="board-card">
+                <div class="board-card-title">{{ issue.title }}</div>
+                <div class="board-card-foot">
+                  {{ project_badge(issue.project) }}
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="col-ref">{{ issue.ref }}</span>
+                    {{ close_btn(issue.id) }}
+                  </div>
+                </div>
+              </div>
+              {% else %}
+              <div style="padding:16px;text-align:center;font-size:12px;color:var(--text3);">No issues</div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ══ TIMELINE VIEW ═══════════════════════════════ -->
+      {% elif current_view == 'timeline' %}
+      <div class="table-toolbar">
+        <span style="font-size:13px;color:var(--text2);">Issues by date</span>
+        <div class="toolbar-sep"></div>
+        <div class="view-toggle">
+          <a href="{{ url_for('dashboard', status='active', view='list') }}" class="view-btn" title="List">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+            </svg>
+          </a>
+          <a href="{{ url_for('dashboard', status='active', view='timeline') }}" class="view-btn active" title="Timeline">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+      <div class="timeline-scroll">
+        {% if issues %}
+          {% set seen_dates = namespace(dates=[]) %}
+          {% for issue in issues %}
+            {% if issue.date not in seen_dates.dates %}
+              {% set _ = seen_dates.dates.append(issue.date) %}
+              {% if not loop.first %}</div>{% endif %}
+              <div class="timeline-group">
+              <div class="timeline-date-label">{{ issue.date }}</div>
+            {% endif %}
+            <div class="timeline-item">
+              <span class="timeline-dot" style="background:
+                {%- if issue.priority == 'High' %}var(--pri-high-dot)
+                {%- elif issue.priority == 'Medium' %}var(--pri-medium-dot)
+                {%- else %}var(--pri-low-dot){%- endif %};"></span>
+              <div class="timeline-body">
+                <div class="timeline-title">{{ issue.title }}</div>
+                <div class="timeline-meta">
+                  <span class="col-ref">{{ issue.ref }}</span>
+                  {{ project_badge(issue.project) }}
+                  {{ priority_pill(issue.priority) }}
+                </div>
+              </div>
+              {% if current_status == 'active' %}{{ close_btn(issue.id) }}{% endif %}
+            </div>
+          {% endfor %}
+          </div>
+        {% else %}
+        <div class="empty">No issues to display.</div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div>{# /table-card #}
+  </main>
+</div>
+
+<script>
+// ── Search: works across list and grid views ──────────────
+function filterIssues() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('#issueTable tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+  document.querySelectorAll('#issueGrid .issue-card').forEach(card => {
+    card.style.display = card.dataset.text.includes(q) ? '' : 'none';
+  });
+}
+
+// ── Table column sorting ──────────────────────────────────
+document.querySelectorAll('th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const table  = th.closest('table');
+    const tbody  = table.querySelector('tbody');
+    const col    = parseInt(th.dataset.col);
+    const asc    = th.classList.contains('sort-asc');
+    table.querySelectorAll('th').forEach(h => h.classList.remove('sort-asc','sort-desc'));
+    th.classList.toggle('sort-asc',  !asc);
+    th.classList.toggle('sort-desc',  asc);
+    Array.from(tbody.querySelectorAll('tr'))
+      .sort((a, b) => {
+        const av = a.cells[col]?.textContent.trim() ?? '';
+        const bv = b.cells[col]?.textContent.trim() ?? '';
+        return asc ? bv.localeCompare(av) : av.localeCompare(bv);
+      })
+      .forEach(r => tbody.appendChild(r));
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+
+/* ── DESIGN TOKENS ─────────────────────────────────────── */
+:root {
+  --bg:        #f7f7f8;
+  --white:     #ffffff;
+  --border:    #e4e4e7;
+  --border2:   #ebebed;
+  --text:      #09090b;
+  --text2:     #52525b;
+  --text3:     #a1a1aa;
+  --accent:    #18181b;
+  --sidebar-w: 216px;
+  --radius:    8px;
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+
+  /* priority colors */
+  --pri-high-bg:    #fef2f2;
+  --pri-high-fg:    #dc2626;
+  --pri-high-dot:   #ef4444;
+  --pri-medium-bg:  #fffbeb;
+  --pri-medium-fg:  #d97706;
+  --pri-medium-dot: #f59e0b;
+  --pri-low-bg:     #f8fafc;
+  --pri-low-fg:     #64748b;
+  --pri-low-dot:    #94a3b8;
+
+  /* badge colors */
+  --b-blue-bg:   #eff6ff; --b-blue-fg:   #2563eb;
+  --b-orange-bg: #fff7ed; --b-orange-fg: #c2410c;
+  --b-green-bg:  #f0fdf4; --b-green-fg:  #15803d;
+  --b-purple-bg: #faf5ff; --b-purple-fg: #7c3aed;
+  --b-red-bg:    #fef2f2; --b-red-fg:    #dc2626;
+  --b-gray-bg:   #f4f4f5; --b-gray-fg:   #52525b;
+}
+
+/* ── RESET ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: 'Geist', system-ui, sans-serif; }
+body { background: var(--bg); color: var(--text); font-size: 14px; }
+a { color: inherit; text-decoration: none; }
+button, input, select { font-family: inherit; font-size: 14px; }
+
+/* ── SHARED BUTTON ──────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 6px; font-size: 13px;
+  font-weight: 500; cursor: pointer; transition: all 0.15s;
+  border: 1px solid var(--border); background: var(--white); color: var(--text2);
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg); color: var(--text); border-color: #ccc; }
+.btn svg   { flex-shrink: 0; }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: #333; border-color: #333; color: #fff; }
+.btn-danger:hover  { background: var(--pri-high-bg); border-color: #fca5a5; color: var(--pri-high-fg); }
+
+/* ── SHARED BADGES ──────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 500; white-space: nowrap; letter-spacing: 0.01em;
+}
+.b-blue   { background: var(--b-blue-bg);   color: var(--b-blue-fg); }
+.b-orange { background: var(--b-orange-bg); color: var(--b-orange-fg); }
+.b-green  { background: var(--b-green-bg);  color: var(--b-green-fg); }
+.b-purple { background: var(--b-purple-bg); color: var(--b-purple-fg); }
+.b-red    { background: var(--b-red-bg);    color: var(--b-red-fg); }
+.b-gray   { background: var(--b-gray-bg);   color: var(--b-gray-fg); }
+
+/* ── SHARED PRIORITY PILL ───────────────────────────────── */
+.priority-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; }
+.pdot          { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.pri-high   .pdot { background: var(--pri-high-dot); }   .pri-high   { color: var(--pri-high-fg); }
+.pri-medium .pdot { background: var(--pri-medium-dot); } .pri-medium { color: var(--pri-medium-fg); }
+.pri-low    .pdot { background: var(--pri-low-dot); }    .pri-low    { color: var(--pri-low-fg); }
+
+/* ── SHARED AVATAR ──────────────────────────────────────── */
+.avatar {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: linear-gradient(135deg, #e4e4e7, #d4d4d8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; color: var(--text2);
+  border: 1px solid var(--border); flex-shrink: 0;
+}
+.avatar-lg {
+  width: 28px; height: 28px;
+  font-size: 11px;
+}
+
+/* ── SHARED FORM STYLES ─────────────────────────────────── */
+.form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.form-label { font-size: 12px; font-weight: 500; color: var(--text2); }
+.form-input, .form-select {
+  padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 14px; color: var(--text); outline: none; transition: border-color 0.15s;
+  width: 100%; background: var(--white);
+}
+.form-input:focus, .form-select:focus { border-color: var(--accent); }
+.form-actions { display: flex; gap: 10px; margin-top: 8px; justify-content: flex-end; }
+
+/* ── FLASH MESSAGES ─────────────────────────────────────── */
+.flash { padding: 10px 16px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; }
+.flash-error   { background: var(--pri-high-bg); color: var(--pri-high-fg); border: 1px solid #fca5a5; }
+.flash-success { background: var(--b-green-bg);  color: var(--b-green-fg);  border: 1px solid #86efac; }
+
+/* ── ANIMATIONS ─────────────────────────────────────────── */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.anim-fade { animation: fadeIn 0.2s ease; }
+.anim-fade-1 { animation: fadeIn 0.2s ease 0.04s both; }
+.anim-fade-2 { animation: fadeIn 0.2s ease 0.08s both; }
+.anim-fade-3 { animation: fadeIn 0.2s ease 0.12s both; }
