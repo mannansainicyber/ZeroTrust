@@ -1,11 +1,10 @@
-```
-╔══════════════════════════════════════════════════════════╗
-║                                                          ║
-║   ░▒▓█  ZEROTRUST  █▓▒░                                 ║
-║   issue tracking. brutally simple.                       ║
-║                                                          ║
-╚══════════════════════════════════════════════════════════╝
-```
+
+# ╔══════════════════════════════════════════════════════════╗
+# ║                                                          ║
+# ║   ░▒▓█  ZEROTRUST  █▓▒░                                  ║
+# ║   issue tracking. brutally simple.                       ║
+# ║                                                          ║
+# ╚══════════════════════════════════════════════════════════╝
 
 <div align="center">
 
@@ -24,7 +23,7 @@
 
 ```bash
 # clone & enter
-git clone https://github.com/you/zerotrust && cd zerotrust
+git clone https://github.com/mannansainicyber/ZeroTrust && cd ZeroTrust
 
 # install deps (one line)
 pip install -r requirements.txt
@@ -35,7 +34,7 @@ python app.py
 
 Open **http://localhost:5000** — sign up, and you're tracking issues in under 60 seconds.
 
-> The SQLite database (`zerotrust.db`) is created automatically on first run, pre-seeded with 14 demo issues across 5 projects.
+> The SQLite database (`zerotrust.db`) is created automatically on first run, pre-seeded with 1 demo issues across 1 projects.
 
 ---
 
