@@ -51,5 +51,5 @@ Include a brief note about code reviews, tests required, and issue templates if 
 MIT
 
 ## Contact
-Project maintainer — Your Name (replace)  
+Project maintainer — Mannan Saini
 Repo: https://github.com/mannansainicyber/ZeroTrust
