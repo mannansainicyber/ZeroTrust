@@ -10,15 +10,18 @@ A minimal Python service for Issue-related tooling. This repository uses `app.py
 - [Quickstart](#quickstart)
 - [Configuration](#configuration)
 - [Running](#running)
+- [API Usage](#api-usage)
+- [Testing](#testing)
 - [Contributing](#contributing)
 - [License](#license)
 - [Contact](#contact)
 
 ## Overview
-Lightweight Python Issue Tracker. 
+Lightweight Python Issue Tracker for managing and tracking issues efficiently.
 
 ## Requirements
 - Python 3.8+
+- pip
 - git
 
 ## Quickstart
@@ -28,8 +31,16 @@ Clone and install dependencies:
 git clone https://github.com/mannansainicyber/ZeroTrust.git
 cd ZeroTrust
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+```
+
+## Configuration
+Create a `.env` file in the project root with the following variables:
+```env
+FLASK_ENV=development
+DATABASE_URL=sqlite:///issues.db
+SECRET_KEY=your-secret-key-here
 ```
 
 ## Running
@@ -39,17 +50,51 @@ Run the application:
 python app.py
 ```
 
-## Contributing
-1. Fork
-2. Create a branch: git checkout -b feat/your-feature
-3. Commit and open a PR
-4. Follow repository code style and tests
+The application will be available at `http://localhost:5000`
 
-Include a brief note about code reviews, tests required, and issue templates if any.
+## API Usage
+
+### Create an Issue
+```bash
+curl -X POST http://localhost:5000/api/issues \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Bug fix", "description": "Fix login issue", "status": "open"}'
+```
+
+### Get Issues
+```bash
+curl http://localhost:5000/api/issues
+```
+
+### Update Issue
+```bash
+curl -X PUT http://localhost:5000/api/issues/1 \
+  -H "Content-Type: application/json" \
+  -d '{"status": "closed"}'
+```
+
+## Testing
+Run tests with:
+```bash
+pytest tests/
+```
+
+## Contributing
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feat/your-feature`
+3. Write tests for new functionality
+4. Commit changes: `git commit -am 'Add new feature'`
+5. Push to the branch: `git push origin feat/your-feature`
+6. Open a Pull Request
+
+Please ensure:
+- Code follows PEP 8 style guidelines
+- All tests pass before submitting PR
+- Include descriptive commit messages
 
 ## License
 MIT
 
 ## Contact
-Project maintainer — Mannan Saini
+Project maintainer — Mannan Saini  
 Repo: https://github.com/mannansainicyber/ZeroTrust
