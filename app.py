@@ -12,7 +12,7 @@ VALID_VIEWS     = {'list', 'grid', 'board', 'timeline'}
 VALID_PRIORITIES = {'High', 'Medium', 'Low'}
 
 SEED_ISSUES = [
-    ('FIG-123', 'Task 1',                                        'Project 1',      'High',   'Dec 5'),
+    ('FIG-123', 'Task 1','Project 1','High','Dec 5'),
 ]
 
 # ── DB helpers ─────────────────────────────────────────────
