@@ -92,9 +92,6 @@ Please ensure:
 - All tests pass before submitting PR
 - Include descriptive commit messages
 
-## License
-MIT
-
 ## Contact
 Project maintainer — Mannan Saini  
 Repo: https://github.com/mannansainicyber/ZeroTrust
