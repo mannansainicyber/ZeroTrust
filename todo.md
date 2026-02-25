@@ -6,10 +6,10 @@
 - [x] Implement GET issues endpoint
 - [x] Implement POST issues endpoint
 - [x] Implement PUT issues endpoint
-- [ ] Add user authentication
-- [ ] Implement issue filtering by status
-- [ ] Add issue priority levels
-- [ ] Add issue deletion endpoint
+- [x] Add user authentication
+- [x] Implement issue filtering by status
+- [x] Add issue priority levels
+- [x] Add issue deletion endpoint
 
 ## Bug Fixes
 - [ ] Fix issue update edge cases

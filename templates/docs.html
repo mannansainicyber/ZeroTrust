@@ -1,0 +1,732 @@
+{% extends "base.html" %}
+{% block title %} — Docs{% endblock %}
+{% block extra_style %}
+
+/* ── Layout ─────────────────────────────────────────────── */
+:root {
+  --topbar-h:  52px;
+  --sidebar-w: 232px;
+  --toc-w:     204px;
+  --accent:    #111;
+  --accent-bg: rgba(0,0,0,0.04);
+  --accent-fg: #111;
+  --tip-bg:    #f0fdf4; --tip-border: #bbf7d0; --tip-fg: #15803d;
+  --warn-bg:   #fffbeb; --warn-border: #fde68a; --warn-fg: #92400e;
+  --info-bg:   #eff6ff; --info-border: #bfdbfe; --info-fg: #1d4ed8;
+  --code-bg:   #f6f7f9;
+  --code-border: #e4e6eb;
+  --mono: 'DM Mono', 'Fira Mono', monospace;
+}
+
+body { display: flex; flex-direction: column; min-height: 100vh; background: var(--bg, #fafafa); }
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  background: var(--white, #fff);
+  border-bottom: 1px solid var(--border, #e8e8e8);
+  display: flex; align-items: center; padding: 0 20px; gap: 0;
+  z-index: 100;
+}
+.topbar-brand { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; color: #111; margin-right: 2px; }
+.topbar-sep   { width: 1px; height: 18px; background: var(--border, #e8e8e8); margin: 0 14px; }
+.topbar-crumb { font-size: 13px; color: var(--text2, #888); }
+.topbar-space { flex: 1; }
+.topbar-search {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--bg, #fafafa); border: 1px solid var(--border, #e8e8e8);
+  border-radius: 6px; padding: 5px 11px;
+  font-size: 12px; color: var(--text2, #999); width: 200px; margin-right: 14px;
+}
+.topbar-search input {
+  border: none; background: none; outline: none; font-size: 12px;
+  color: var(--text1, #111); width: 100%;
+}
+.topbar-search input::placeholder { color: var(--text2, #aaa); }
+.topbar-user {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13px; color: var(--text2, #888);
+}
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #111; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; flex-shrink: 0;
+}
+.topbar-signout {
+  background: none; border: 1px solid var(--border, #e8e8e8); border-radius: 5px;
+  font-size: 12px; padding: 3px 10px; cursor: pointer; color: var(--text2, #888);
+  transition: background 0.12s;
+}
+.topbar-signout:hover { background: var(--bg, #f4f4f4); }
+
+/* ── Shell ──────────────────────────────────────────────── */
+.docs-shell {
+  display: flex; padding-top: var(--topbar-h); min-height: 100vh;
+}
+
+/* ── Sidebar ────────────────────────────────────────────── */
+.docs-sidebar {
+  position: fixed; top: var(--topbar-h); left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--white, #fff);
+  border-right: 1px solid var(--border, #e8e8e8);
+  padding: 20px 10px 32px;
+  overflow-y: auto; z-index: 90;
+}
+.sidebar-section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--text3, #bbb);
+  padding: 8px 8px 4px; margin-top: 4px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px; border-radius: 5px; font-size: 13px;
+  color: var(--text2, #666); text-decoration: none;
+  transition: background 0.1s, color 0.1s; white-space: nowrap;
+}
+.nav-item:hover { background: var(--bg, #f4f4f4); color: #111; }
+.nav-item.active { background: var(--accent-bg); color: var(--accent-fg); font-weight: 500; }
+.nav-item svg { flex-shrink: 0; opacity: 0.55; }
+
+/* ── Main ───────────────────────────────────────────────── */
+.docs-main {
+  margin-left: var(--sidebar-w); flex: 1;
+  display: flex; justify-content: center;
+}
+.docs-body {
+  flex: 1; max-width: 760px; padding: 44px 48px 80px;
+  min-width: 0;
+}
+
+/* ── TOC ────────────────────────────────────────────────── */
+.docs-toc {
+  width: var(--toc-w); flex-shrink: 0;
+  position: sticky; top: calc(var(--topbar-h) + 28px);
+  align-self: flex-start; padding: 28px 20px 28px 0;
+}
+.toc-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--text3, #bbb); margin-bottom: 10px;
+}
+.toc-link {
+  display: block; font-size: 12px; color: var(--text2, #999);
+  text-decoration: none; padding: 4px 0 4px 12px;
+  border-left: 2px solid var(--border, #e8e8e8);
+  line-height: 1.45; transition: color 0.12s, border-color 0.12s;
+}
+.toc-link:hover  { color: #111; border-left-color: #ccc; }
+.toc-link.active { color: #111; border-left-color: #111; font-weight: 500; }
+.toc-link.sub    { padding-left: 22px; font-size: 11.5px; }
+
+/* ── Breadcrumb ─────────────────────────────────────────── */
+.breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text3, #bbb); margin-bottom: 26px;
+}
+.breadcrumb a { color: var(--text2, #999); text-decoration: none; }
+.breadcrumb a:hover { color: #111; }
+
+/* ── Doc header ─────────────────────────────────────────── */
+.doc-header { margin-bottom: 32px; animation: fadeIn 0.25s ease both; }
+.doc-header h1 {
+  font-size: 24px; font-weight: 700; letter-spacing: -0.5px;
+  color: #111; margin-bottom: 10px; line-height: 1.2;
+}
+.doc-desc { font-size: 15px; color: var(--text2, #666); line-height: 1.7; max-width: 560px; }
+.doc-meta {
+  display: flex; gap: 16px; margin-top: 14px;
+  font-size: 12px; color: var(--text3, #bbb);
+}
+.doc-meta-item { display: flex; align-items: center; gap: 5px; }
+
+/* ── Divider ────────────────────────────────────────────── */
+.doc-divider { height: 1px; background: var(--border, #e8e8e8); margin: 36px 0; }
+
+/* ── Section ────────────────────────────────────────────── */
+.doc-section { margin-bottom: 44px; animation: fadeIn 0.3s ease both; }
+.doc-section:nth-child(2) { animation-delay: 0.04s; }
+.doc-section:nth-child(3) { animation-delay: 0.08s; }
+.doc-section:nth-child(4) { animation-delay: 0.12s; }
+.doc-section:nth-child(5) { animation-delay: 0.16s; }
+
+/* ── Headings ───────────────────────────────────────────── */
+h2.doc-h2 {
+  font-size: 17px; font-weight: 700; color: #111; letter-spacing: -0.3px;
+  margin-bottom: 12px; padding-top: 2px;
+  scroll-margin-top: calc(var(--topbar-h) + 20px);
+}
+h3.doc-h3 {
+  font-size: 11px; font-weight: 700; color: var(--text2, #777);
+  text-transform: uppercase; letter-spacing: 0.07em;
+  margin: 24px 0 10px; scroll-margin-top: calc(var(--topbar-h) + 20px);
+}
+
+p.doc-p { font-size: 14px; color: var(--text2, #555); line-height: 1.78; margin-bottom: 12px; }
+
+/* ── Inline code ────────────────────────────────────────── */
+.ic {
+  font-family: var(--mono); font-size: 12px;
+  background: var(--code-bg); border: 1px solid var(--code-border);
+  border-radius: 4px; padding: 1px 6px; color: #c2185b;
+}
+
+/* ── Callouts ───────────────────────────────────────────── */
+.callout {
+  border-radius: var(--radius, 7px); padding: 13px 15px;
+  margin: 18px 0; border: 1px solid; display: flex; gap: 11px;
+  font-size: 13px; line-height: 1.65;
+}
+.callout svg { flex-shrink: 0; margin-top: 1px; }
+.callout strong { display: block; font-weight: 600; margin-bottom: 1px; }
+.callout-info  { background: var(--info-bg);  border-color: var(--info-border);  color: var(--info-fg);  }
+.callout-warn  { background: var(--warn-bg);  border-color: var(--warn-border);  color: var(--warn-fg);  }
+.callout-tip   { background: var(--tip-bg);   border-color: var(--tip-border);   color: var(--tip-fg);   }
+
+/* ── Code block ─────────────────────────────────────────── */
+.code-wrap { border-radius: var(--radius, 7px); overflow: hidden; margin: 16px 0; border: 1px solid var(--code-border); }
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #f0f1f4; padding: 7px 14px;
+  font-family: var(--mono); font-size: 11px; color: var(--text2, #888);
+  border-bottom: 1px solid var(--code-border);
+}
+.code-wrap pre {
+  background: var(--code-bg); margin: 0; padding: 16px 18px;
+  overflow-x: auto;
+}
+.code-wrap pre code {
+  font-family: var(--mono); font-size: 12.5px;
+  color: #24292e; line-height: 1.7;
+}
+.copy-btn {
+  background: none; border: 1px solid var(--border, #ddd);
+  border-radius: 4px; font-size: 10px; padding: 2px 8px;
+  cursor: pointer; color: var(--text2, #888);
+  transition: background 0.1s, color 0.1s;
+}
+.copy-btn:hover { background: #e8e8e8; color: #111; }
+.copy-btn.copied { color: #15803d; border-color: #bbf7d0; }
+
+/* ── Step list ──────────────────────────────────────────── */
+.steps { list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 16px; margin: 18px 0; }
+.steps li { counter-increment: step; display: flex; gap: 14px; align-items: flex-start; }
+.steps li::before {
+  content: counter(step);
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #111; color: #fff;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 2px;
+}
+.step-title { font-size: 13px; font-weight: 600; color: #111; margin-bottom: 2px; }
+.step-desc  { font-size: 13px; color: var(--text2, #666); line-height: 1.6; }
+
+/* ── Endpoint row ───────────────────────────────────────── */
+.endpoint {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--code-bg); border: 1px solid var(--code-border);
+  border-radius: var(--radius, 7px); padding: 11px 14px; margin: 10px 0;
+}
+.endpoint-path { font-family: var(--mono); font-size: 13px; color: #111; }
+.endpoint-desc { margin-left: auto; font-size: 12px; color: var(--text3, #bbb); }
+.method {
+  display: inline-flex; align-items: center;
+  border-radius: 4px; padding: 2px 9px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.04em; font-family: var(--mono); flex-shrink: 0;
+}
+.m-get    { background: #dcfce7; color: #15803d; }
+.m-post   { background: #dbeafe; color: #1d4ed8; }
+.m-patch  { background: #fef9c3; color: #854d0e; }
+.m-delete { background: #fee2e2; color: #b91c1c; }
+
+/* ── Prop table ─────────────────────────────────────────── */
+.prop-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 16px 0; }
+.prop-table thead th {
+  text-align: left; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text3, #bbb); padding: 6px 12px;
+  border-bottom: 1px solid var(--border, #e8e8e8);
+}
+.prop-table tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
+.prop-table tbody tr:last-child { border-bottom: none; }
+.prop-table tbody tr:hover { background: var(--bg, #fafafa); }
+.prop-table td { padding: 9px 12px; color: var(--text2, #555); vertical-align: top; }
+.prop-table td:first-child { font-family: var(--mono); font-size: 12px; color: #111; }
+.badge-type { background: #eff6ff; color: #1d4ed8; border-radius: 4px; padding: 1px 7px; font-size: 11px; font-family: var(--mono); }
+.badge-req  { background: #fee2e2; color: #b91c1c; border-radius: 4px; padding: 1px 7px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
+.badge-opt  { background: #f3f4f6; color: #9ca3af; border-radius: 4px; padding: 1px 7px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
+
+/* ── Page nav ───────────────────────────────────────────── */
+.page-nav { display: flex; gap: 12px; margin-top: 52px; padding-top: 24px; border-top: 1px solid var(--border, #e8e8e8); }
+.page-nav-card {
+  flex: 1; background: var(--white, #fff); border: 1px solid var(--border, #e8e8e8);
+  border-radius: var(--radius, 7px); padding: 14px 16px; text-decoration: none;
+  display: flex; flex-direction: column; gap: 3px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.page-nav-card:hover { border-color: #bbb; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+.page-nav-card.right { align-items: flex-end; }
+.page-nav-lbl   { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3, #bbb); }
+.page-nav-title { font-size: 13px; font-weight: 600; color: #111; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+{% endblock %}
+
+{% block body %}
+
+<!-- ── TOPBAR ─────────────────────────────────────────────── -->
+<header class="topbar">
+  <span class="topbar-brand">ZeroTrust</span>
+  <div class="topbar-sep"></div>
+  <span class="topbar-crumb">Docs</span>
+  <div class="topbar-space"></div>
+
+  <div class="topbar-search">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input id="docSearch" type="text" placeholder="Search docs…" oninput="searchDocs(this.value)">
+  </div>
+
+  <div class="topbar-user">
+    <div class="avatar">{{ email[0]|upper if email else 'U' }}</div>
+    <span>{{ email }}</span>
+    <a href="{{ url_for('signout') }}"><button class="topbar-signout">Sign out</button></a>
+  </div>
+</header>
+
+<div class="docs-shell">
+
+  <!-- ── SIDEBAR ────────────────────────────────────────── -->
+  <aside class="docs-sidebar">
+
+    <div class="sidebar-section-label">Getting Started</div>
+    <a href="#overview" class="nav-item active" data-section="overview">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      Overview
+    </a>
+    <a href="#quickstart" class="nav-item" data-section="quickstart">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+      Quick Start
+    </a>
+    <a href="#authentication" class="nav-item" data-section="authentication">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+      </svg>
+      Authentication
+    </a>
+
+    <div class="sidebar-section-label" style="margin-top:6px;">Issues</div>
+    <a href="#issues-overview" class="nav-item" data-section="issues-overview">
+      <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor" opacity="0.35"/></svg>
+      <span style="font-size:12px;">Overview</span>
+    </a>
+    <a href="#issues-endpoints" class="nav-item" data-section="issues-endpoints">
+      <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor" opacity="0.35"/></svg>
+      <span style="font-size:12px;">API Endpoints</span>
+    </a>
+    <a href="#issues-fields" class="nav-item" data-section="issues-fields">
+      <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor" opacity="0.35"/></svg>
+      <span style="font-size:12px;">Field Reference</span>
+    </a>
+
+    <div class="sidebar-section-label" style="margin-top:6px;">Views</div>
+    <a href="#views-list" class="nav-item" data-section="views-list">
+      <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor" opacity="0.35"/></svg>
+      <span style="font-size:12px;">List &amp; Grid</span>
+    </a>
+    <a href="#views-board" class="nav-item" data-section="views-board">
+      <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor" opacity="0.35"/></svg>
+      <span style="font-size:12px;">Board</span>
+    </a>
+    <a href="#views-timeline" class="nav-item" data-section="views-timeline">
+      <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor" opacity="0.35"/></svg>
+      <span style="font-size:12px;">Timeline</span>
+    </a>
+
+    <div class="sidebar-section-label" style="margin-top:6px;">Reference</div>
+    <a href="#filtering" class="nav-item" data-section="filtering">
+      <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor" opacity="0.35"/></svg>
+      <span style="font-size:12px;">Filtering &amp; Search</span>
+    </a>
+    <a href="#errors" class="nav-item" data-section="errors">
+      <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor" opacity="0.35"/></svg>
+      <span style="font-size:12px;">Error Codes</span>
+    </a>
+
+  </aside>
+
+  <!-- ── MAIN ───────────────────────────────────────────── -->
+  <main class="docs-main">
+
+    <!-- CONTENT -->
+    <div class="docs-body" id="docsBody">
+
+      <!-- Breadcrumb -->
+      <div class="breadcrumb">
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <span>›</span>
+        <span>Docs</span>
+        <span>›</span>
+        <span style="color:#111;">Overview</span>
+      </div>
+
+      <!-- ── Doc header ── -->
+      <div class="doc-header">
+        <h1 id="overview">ZeroTrust Docs</h1>
+        <p class="doc-desc">Everything you need to integrate, configure, and extend ZeroTrust — the issue tracker built for engineering teams that care about zero-noise workflows.</p>
+        <div class="doc-meta">
+          <div class="doc-meta-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Updated Feb 2026
+          </div>
+          <div class="doc-meta-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            v2.4.0
+          </div>
+        </div>
+      </div>
+
+      <div class="doc-divider"></div>
+
+      <!-- ── QUICK START ── -->
+      <div class="doc-section">
+        <h2 class="doc-h2" id="quickstart">Quick Start</h2>
+        <p class="doc-p">Get a working ZeroTrust instance running in under five minutes. You'll need Python 3.10+ and a PostgreSQL database (SQLite works fine for local development).</p>
+
+        <ol class="steps">
+          <li>
+            <div>
+              <div class="step-title">Clone the repository</div>
+              <div class="step-desc">Pull the latest stable release from GitHub.</div>
+            </div>
+          </li>
+          <li>
+            <div>
+              <div class="step-title">Install dependencies</div>
+              <div class="step-desc">All Python packages are pinned in <span class="ic">requirements.txt</span>.</div>
+            </div>
+          </li>
+          <li>
+            <div>
+              <div class="step-title">Configure environment variables</div>
+              <div class="step-desc">Copy <span class="ic">.env.example</span> to <span class="ic">.env</span> and set your database URL and secret key.</div>
+            </div>
+          </li>
+          <li>
+            <div>
+              <div class="step-title">Run migrations &amp; start the server</div>
+              <div class="step-desc">Apply the schema and boot the Flask dev server on port 5000.</div>
+            </div>
+          </li>
+        </ol>
+
+        <div class="code-wrap">
+          <div class="code-header">
+            <span>bash</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>git clone https://github.com/your-org/zerotrust.git
+cd zerotrust
+pip install -r requirements.txt
+cp .env.example .env
+flask db upgrade
+flask run</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          <div><strong>Tip</strong>The dev server boots on <span class="ic">http://localhost:5000</span>. Your first login will trigger the admin setup wizard.</div>
+        </div>
+      </div>
+
+      <div class="doc-divider"></div>
+
+      <!-- ── AUTHENTICATION ── -->
+      <div class="doc-section">
+        <h2 class="doc-h2" id="authentication">Authentication</h2>
+        <p class="doc-p">ZeroTrust uses session-based authentication for the web UI and bearer tokens for the REST API. All API requests must include a valid token in the <span class="ic">Authorization</span> header.</p>
+
+        <div class="code-wrap">
+          <div class="code-header">
+            <span>http</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>Authorization: Bearer &lt;your-api-token&gt;</code></pre>
+        </div>
+
+        <div class="callout callout-warn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div><strong>Security</strong>Tokens are scoped per user and expire after 30 days of inactivity. Never commit tokens to source control.</div>
+        </div>
+
+        <h3 class="doc-h3">Generating a Token</h3>
+        <p class="doc-p">Navigate to <strong>Settings → API Tokens</strong> in the web UI, or call the token endpoint directly with your credentials:</p>
+
+        <div class="code-wrap">
+          <div class="code-header">
+            <span>POST /api/auth/token</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>{
+  "email": "you@example.com",
+  "password": "••••••••"
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="doc-divider"></div>
+
+      <!-- ── ISSUES ── -->
+      <div class="doc-section">
+        <h2 class="doc-h2" id="issues-overview">Issues</h2>
+        <p class="doc-p">Issues are the core entity in ZeroTrust. Each issue belongs to a project, carries a priority level, and transitions between <span class="ic">active</span> and <span class="ic">closed</span> states.</p>
+
+        <div class="callout callout-info">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div><strong>Note</strong>Issue references (the <span class="ic">ref</span> field) are auto-generated in the format <span class="ic">FIG-042</span> and are immutable after creation.</div>
+        </div>
+
+        <h2 class="doc-h2" id="issues-endpoints" style="margin-top:28px;">API Endpoints</h2>
+
+        <div class="endpoint">
+          <span class="method m-get">GET</span>
+          <span class="endpoint-path">/api/issues</span>
+          <span class="endpoint-desc">List all issues</span>
+        </div>
+        <div class="endpoint">
+          <span class="method m-post">POST</span>
+          <span class="endpoint-path">/api/issues</span>
+          <span class="endpoint-desc">Create a new issue</span>
+        </div>
+        <div class="endpoint">
+          <span class="method m-get">GET</span>
+          <span class="endpoint-path">/api/issues/:id</span>
+          <span class="endpoint-desc">Retrieve a single issue</span>
+        </div>
+        <div class="endpoint">
+          <span class="method m-patch">PATCH</span>
+          <span class="endpoint-path">/api/issues/:id</span>
+          <span class="endpoint-desc">Update an issue</span>
+        </div>
+        <div class="endpoint">
+          <span class="method m-delete">DELETE</span>
+          <span class="endpoint-path">/api/issues/:id</span>
+          <span class="endpoint-desc">Permanently delete an issue</span>
+        </div>
+      </div>
+
+      <div class="doc-divider"></div>
+
+      <!-- ── FIELD REFERENCE ── -->
+      <div class="doc-section">
+        <h2 class="doc-h2" id="issues-fields">Field Reference</h2>
+        <p class="doc-p">The issue object returned by the API contains the following fields:</p>
+
+        <table class="prop-table">
+          <thead>
+            <tr><th>Field</th><th>Type</th><th>Req.</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>id</td>
+              <td><span class="badge-type">integer</span></td>
+              <td><span class="badge-req">required</span></td>
+              <td>Auto-assigned unique numeric identifier.</td>
+            </tr>
+            <tr>
+              <td>ref</td>
+              <td><span class="badge-type">string</span></td>
+              <td><span class="badge-req">required</span></td>
+              <td>Human-readable reference, e.g. <span class="ic">FIG-042</span>.</td>
+            </tr>
+            <tr>
+              <td>title</td>
+              <td><span class="badge-type">string</span></td>
+              <td><span class="badge-req">required</span></td>
+              <td>Short descriptive title. Max 255 characters.</td>
+            </tr>
+            <tr>
+              <td>project</td>
+              <td><span class="badge-type">string</span></td>
+              <td><span class="badge-req">required</span></td>
+              <td>Name of the associated project.</td>
+            </tr>
+            <tr>
+              <td>priority</td>
+              <td><span class="badge-type">enum</span></td>
+              <td><span class="badge-req">required</span></td>
+              <td>One of <span class="ic">High</span>, <span class="ic">Medium</span>, or <span class="ic">Low</span>.</td>
+            </tr>
+            <tr>
+              <td>status</td>
+              <td><span class="badge-type">enum</span></td>
+              <td><span class="badge-opt">optional</span></td>
+              <td><span class="ic">active</span> or <span class="ic">closed</span>. Defaults to <span class="ic">active</span>.</td>
+            </tr>
+            <tr>
+              <td>date</td>
+              <td><span class="badge-type">date</span></td>
+              <td><span class="badge-opt">optional</span></td>
+              <td>Creation date (e.g. <span class="ic">Dec 5</span>). Defaults to today.</td>
+            </tr>
+            <tr>
+              <td>owner_id</td>
+              <td><span class="badge-type">integer</span></td>
+              <td><span class="badge-opt">optional</span></td>
+              <td>Foreign key referencing the assigned user.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-divider"></div>
+
+      <!-- ── VIEWS ── -->
+      <div class="doc-section">
+        <h2 class="doc-h2" id="views-list">Views — List &amp; Grid</h2>
+        <p class="doc-p">The default view is <strong>List</strong>. Issues render in a sortable table with columns for ref, title, project, priority, date, and owner. Clicking any column header sorts the table client-side.</p>
+        <p class="doc-p">Switch to <strong>Grid</strong> for a card-based layout suited to scanning many issues at once. Both views share the same search and filter controls in the toolbar.</p>
+
+        <h3 class="doc-h3">URL Parameters</h3>
+        <table class="prop-table">
+          <thead><tr><th>Param</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>view</td><td><span class="badge-type">string</span></td><td><span class="ic">list</span></td><td><span class="ic">list</span>, <span class="ic">grid</span>, <span class="ic">board</span>, or <span class="ic">timeline</span></td></tr>
+            <tr><td>status</td><td><span class="badge-type">string</span></td><td><span class="ic">active</span></td><td><span class="ic">active</span> or <span class="ic">closed</span></td></tr>
+            <tr><td>priority</td><td><span class="badge-type">string</span></td><td>—</td><td>Filter by <span class="ic">High</span>, <span class="ic">Medium</span>, or <span class="ic">Low</span></td></tr>
+            <tr><td>project</td><td><span class="badge-type">string</span></td><td>—</td><td>Filter by exact project name</td></tr>
+          </tbody>
+        </table>
+
+        <h2 class="doc-h2" id="views-board" style="margin-top:28px;">Board View</h2>
+        <p class="doc-p">Board groups issues into three columns by priority — <strong>High</strong>, <strong>Medium</strong>, and <strong>Low</strong>. Each column shows a count badge and scrolls independently. Issues can be closed directly from the board without navigating away.</p>
+
+        <h2 class="doc-h2" id="views-timeline" style="margin-top:28px;">Timeline View</h2>
+        <p class="doc-p">Timeline groups issues by their <span class="ic">date</span> field in reverse chronological order. Each group renders a date label followed by a dot-marked list of issues for that day, colour-coded by priority.</p>
+      </div>
+
+      <div class="doc-divider"></div>
+
+      <!-- ── FILTERING ── -->
+      <div class="doc-section">
+        <h2 class="doc-h2" id="filtering">Filtering &amp; Search</h2>
+        <p class="doc-p">The toolbar provides two server-side filters (priority, project) and one client-side search input. Search filters rows in real time by matching against the issue title, ref, and project name without a round-trip to the server.</p>
+
+        <div class="code-wrap">
+          <div class="code-header">
+            <span>example url</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code>/dashboard?status=active&amp;view=list&amp;priority=High&amp;project=Backend</code></pre>
+        </div>
+
+        <div class="callout callout-info">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div><strong>Stats strip</strong>Clicking any card in the stats strip applies the corresponding priority filter and highlights the selected card.</div>
+        </div>
+      </div>
+
+      <div class="doc-divider"></div>
+
+      <!-- ── ERRORS ── -->
+      <div class="doc-section">
+        <h2 class="doc-h2" id="errors">Error Codes</h2>
+        <p class="doc-p">The API returns standard HTTP status codes alongside a JSON body with a machine-readable <span class="ic">code</span> and a human-readable <span class="ic">message</span>.</p>
+
+        <table class="prop-table">
+          <thead><tr><th>Status</th><th>Code</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>400</td><td><span class="badge-type">bad_request</span></td><td>Missing or invalid fields in the request body.</td></tr>
+            <tr><td>401</td><td><span class="badge-type">unauthorized</span></td><td>Missing or expired bearer token.</td></tr>
+            <tr><td>403</td><td><span class="badge-type">forbidden</span></td><td>Token lacks permission for this action.</td></tr>
+            <tr><td>404</td><td><span class="badge-type">not_found</span></td><td>Requested issue or resource does not exist.</td></tr>
+            <tr><td>422</td><td><span class="badge-type">validation_error</span></td><td>Data passed validation but failed a business rule.</td></tr>
+            <tr><td>500</td><td><span class="badge-type">server_error</span></td><td>Unexpected server-side error — check application logs.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── PAGE NAV ── -->
+      <div class="page-nav">
+        <a href="#quickstart" class="page-nav-card">
+          <span class="page-nav-lbl">← Previous</span>
+          <span class="page-nav-title">Quick Start</span>
+        </a>
+        <a href="#issues-endpoints" class="page-nav-card right">
+          <span class="page-nav-lbl">Next →</span>
+          <span class="page-nav-title">API Endpoints</span>
+        </a>
+      </div>
+
+    </div>{# /docs-body #}
+
+    <!-- TOC -->
+    <nav class="docs-toc">
+      <div class="toc-label">On this page</div>
+      <a href="#overview"         class="toc-link active">Overview</a>
+      <a href="#quickstart"       class="toc-link">Quick Start</a>
+      <a href="#authentication"   class="toc-link">Authentication</a>
+      <a href="#issues-overview"  class="toc-link">Issues</a>
+      <a href="#issues-endpoints" class="toc-link sub">API Endpoints</a>
+      <a href="#issues-fields"    class="toc-link sub">Field Reference</a>
+      <a href="#views-list"       class="toc-link">Views — List &amp; Grid</a>
+      <a href="#views-board"      class="toc-link sub">Board</a>
+      <a href="#views-timeline"   class="toc-link sub">Timeline</a>
+      <a href="#filtering"        class="toc-link">Filtering &amp; Search</a>
+      <a href="#errors"           class="toc-link">Error Codes</a>
+    </nav>
+
+  </main>
+</div>
+
+<script>
+// ── Scroll spy: sync TOC + sidebar ───────────────────────
+const headings = Array.from(document.querySelectorAll('[id]'));
+const tocLinks = document.querySelectorAll('.toc-link');
+const navItems = document.querySelectorAll('.nav-item[data-section]');
+const OFFSET   = 80;
+
+function getActiveId() {
+  let active = headings[0];
+  for (const h of headings) {
+    if (h.getBoundingClientRect().top <= OFFSET) active = h;
+  }
+  return active?.id ?? '';
+}
+
+function syncNav() {
+  const id = getActiveId();
+  tocLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + id));
+  navItems.forEach(a => a.classList.toggle('active', a.dataset.section === id));
+}
+
+window.addEventListener('scroll', syncNav, { passive: true });
+syncNav();
+
+// ── Copy code button ─────────────────────────────────────
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  navigator.clipboard.writeText(pre.textContent.trim()).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+
+// ── Live search: fade non-matching sections ──────────────
+function searchDocs(q) {
+  const term = q.toLowerCase().trim();
+  document.querySelectorAll('.doc-section').forEach(sec => {
+    sec.style.opacity = (!term || sec.textContent.toLowerCase().includes(term)) ? '' : '0.22';
+  });
+}
+</script>
+
+{% endblock %}

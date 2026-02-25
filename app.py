@@ -98,6 +98,12 @@ def signin():
         flash('Invalid email or password.', 'error')
     return render_template('signin.html')
 
+@app.route('/docs')
+def docs():
+    redir = require_login()
+    if redir:
+        return redir
+    return render_template('docs.html')
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
