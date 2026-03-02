@@ -1,97 +1,164 @@
 # ZeroTrust
 
-![License](https://img.shields.io/badge/license-MIT-green.svg) ![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)
+A lightweight issue-tracking web app built with Flask and SQLite. Create, filter, and close issues across projects with multiple view modes (list, grid, board, timeline).
 
-A minimal Python service for Issue-related tooling. This repository uses `app.py` as the application entrypoint.
+---
 
-## Table of Contents
-- [Overview](#overview)
-- [Requirements](#requirements)
-- [Quickstart](#quickstart)
-- [Configuration](#configuration)
-- [Running](#running)
-- [API Usage](#api-usage)
-- [Testing](#testing)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
+## Stack
 
-## Overview
-Lightweight Python Issue Tracker for managing and tracking issues efficiently.
+- **Backend** — Python 3.10+, Flask
+- **Database** — SQLite via the standard `sqlite3` module
+- **Frontend** — Jinja2 templates, vanilla JS, CSS custom properties
+- **Auth** — Email + password with scrypt hashing (via `werkzeug.security`)
 
-## Requirements
-- Python 3.8+
+---
+
+## Prerequisites
+
+- Python 3.10 or higher
 - pip
-- git
+- A terminal
 
-## Quickstart
+---
 
-Clone and install dependencies:
+## Getting Started
+
+### 1. Clone the repo
+
 ```bash
 git clone https://github.com/mannansainicyber/ZeroTrust.git
 cd ZeroTrust
+```
+
+### 2. Create a virtual environment
+
+```bash
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate        # macOS / Linux
+.venv\Scripts\activate           # Windows
+```
+
+### 3. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-## Configuration
-Create a `.env` file in the project root with the following variables:
-```env
-FLASK_ENV=development
-DATABASE_URL=sqlite:///issues.db
-SECRET_KEY=your-secret-key-here
+### 4. Set environment variables
+
+Copy the example env file and fill in your values:
+
+```bash
+cp .env.example .env
 ```
 
-## Running
+| Variable | Required | Description |
+|---|---|---|
+| `FLASK_SECRET_KEY` | **Yes** | A long random hex string for signing sessions. Generate one with `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `DATABASE_URL` | No | Path to the SQLite file (default: `zerotrust.db`) |
+| `FLASK_DEBUG` | No | Set to `true` for debug mode — **never in production** |
 
-Run the application:
+> ⚠️ Never commit your `.env` file. It is already in `.gitignore`.
+
+### 5. Run the app
+
 ```bash
 python app.py
 ```
 
-The application will be available at `http://localhost:5000`
+The app will be available at `http://localhost:5000`. On first run, the database and tables are created automatically and seeded with a sample issue.
 
-## API Usage
+---
 
-### Create an Issue
-```bash
-curl -X POST http://localhost:5000/api/issues \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Bug fix", "description": "Fix login issue", "status": "open"}'
+## Project Structure
+
+```
+ZeroTrust/
+├── app.py                  # All routes, DB helpers, auth logic
+├── requirements.txt        # Pinned production dependencies
+├── requirements-dev.txt    # Dev-only: pytest, black, ruff, mypy
+├── .env.example            # Required environment variable template
+├── .gitignore
+├── zerotrust.db            # Created at runtime — not committed
+├── static/
+│   └── css/
+│       ├── base.css        # Design tokens, shared components
+│       └── dashboard.css   # Dashboard-specific layout
+└── templates/
+    ├── base.html           # HTML shell
+    ├── macros.html         # Reusable Jinja2 macros (badges, pills, buttons)
+    ├── dashboard.html      # Main issues view (list / grid / board / timeline)
+    ├── new_issue.html      # Create issue form
+    ├── signin.html         # Auth — sign in
+    ├── signup.html         # Auth — sign up
+    └── docs.html           # API documentation page
 ```
 
-### Get Issues
+---
+
+## Features
+
+- **Authentication** — Sign up, sign in, sign out. Passwords hashed with scrypt + salt.
+- **Issues** — Create issues with title, project, and priority (High / Medium / Low).
+- **Filtering** — Filter by status (active / closed), priority, and project.
+- **Views** — Four view modes: List, Grid, Board (grouped by priority), Timeline (grouped by date).
+- **Search** — Client-side search across title, project, and ref in list and grid views.
+- **Sorting** — Click any column header in list view to sort ascending / descending.
+- **Close issues** — Mark any active issue as closed from any view.
+
+---
+
+## Development
+
+### Run with debug mode
+
 ```bash
-curl http://localhost:5000/api/issues
+FLASK_DEBUG=true python app.py
 ```
 
-### Update Issue
+### Lint and format
+
 ```bash
-curl -X PUT http://localhost:5000/api/issues/1 \
-  -H "Content-Type: application/json" \
-  -d '{"status": "closed"}'
+ruff check .          # linting
+black .               # formatting
+mypy app.py           # type checking
 ```
 
-## Testing
-Run tests with:
+### Run tests
+
 ```bash
-pytest tests/
+pytest
+pytest --cov=app      # with coverage report
 ```
+
+---
+
+## Security Notes
+
+- Passwords are hashed with **scrypt via werkzeug** — not MD5, SHA1, or plain SHA256.
+- All SQL uses **parameterised queries** — no string interpolation.
+- `FLASK_SECRET_KEY` must be set in the environment. The app will warn at startup if it falls back to a random key.
+- `FLASK_DEBUG` defaults to `false`. Never set it to `true` in production — it exposes an interactive Python console on error pages.
+- Failed logins return a generic "Invalid email or password" message regardless of whether the email exists, to prevent user enumeration.
+
+---
+
+## Known Limitations
+
+- `build_next_ref()` uses `COUNT(*)+1` to generate issue refs — this has a race condition under concurrent writes. For production, replace with a sequence table or SQLite's `RETURNING` clause.
+- No CSRF protection on forms. Add Flask-WTF for production use.
+- No rate limiting on auth endpoints. Add Flask-Limiter for production use.
+- No database migrations. Schema changes require a manual DB reset in development.
+- Sessions do not expire. Add a `PERMANENT_SESSION_LIFETIME` config for production.
+
+---
 
 ## Contributing
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feat/your-feature`
-3. Write tests for new functionality
-4. Commit changes: `git commit -am 'Add new feature'`
-5. Push to the branch: `git push origin feat/your-feature`
-6. Open a Pull Request
 
-Please ensure:
-- Code follows PEP 8 style guidelines
-- All tests pass before submitting PR
-- Include descriptive commit messages
+This is a solo project. If you're reading this and want to suggest something, open an issue.
 
-## Contact
-Project maintainer — Mannan Saini  
-Repo: https://github.com/mannansainicyber/ZeroTrust
+---
+
+## License
+
+MIT — see `LICENSE`.
