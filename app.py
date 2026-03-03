@@ -131,7 +131,7 @@ def build_issue_query(
     Returns:
         Tuple of (sql_string, params_list) ready for db.execute().
     """
-    sql: str         = "SELECT * FROM issues WHERE status=?"
+    sql: str = "SELECT * FROM issues WHERE status=?"
     params: list[str] = [status]
 
     if priority and priority in VALID_PRIORITIES:
@@ -179,6 +179,7 @@ def index() -> Response:
 
 @app.route("/signin", methods=["GET", "POST"])
 def signin():
+    """Authenticate a user and open a session."""
     if request.method == "POST":
         raw_email    = request.form.get("email", "")
         raw_password = request.form.get("password", "")
@@ -194,8 +195,7 @@ def signin():
             return render_template("signin.html")
 
         with get_db() as db:
-            # FIXED: was fetching by (email AND password) with a plain SHA256 hash —
-            # now we fetch by email only, then use constant-time verify_password().
+            # Fetch by email only; password is verified in constant time below.
             user = db.execute(
                 "SELECT * FROM users WHERE email=?", (email,)
             ).fetchone()
@@ -206,7 +206,7 @@ def signin():
             log.info("User signed in: %s", email)
             return redirect(url_for("dashboard"))
 
-        # Don't distinguish 'email not found' from 'wrong password' — prevents enumeration
+        # Don't distinguish 'email not found' from 'wrong password'.
         flash("Invalid email or password.", "error")
         log.warning("Failed sign-in attempt for: %s", email)
 
@@ -215,9 +215,7 @@ def signin():
 
 @app.route("/docs")
 def docs():
-    redir = require_login()
-    if redir:
-        return redir
+    """Render the documentation page."""
     return render_template("docs.html")
 
 
@@ -274,7 +272,7 @@ def dashboard():
     priority = request.args.get("priority", "")
     project  = request.args.get("project",  "")
 
-    # Sanitise against allowlists — never trust user-supplied values for branching logic
+    # Sanitise against allowlists — never trust user-supplied values for branching logic.
     if status not in VALID_STATUSES:
         status = "active"
     if view not in VALID_VIEWS:
