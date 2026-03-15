@@ -1,5 +1,5 @@
 """
-ZeroTrust — Flask issue-tracker backend.
+ZeroTrust - Flask issue-tracker backend.
 
 Environment variables:
     FLASK_SECRET_KEY   Required in production — hex string for session signing.
@@ -25,8 +25,8 @@ log = logging.getLogger(__name__)
 # ── App ────────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 
-# FIXED: secret_key was regenerated on every restart, invalidating all sessions.
-# Now loaded from env; a random fallback is used only in development with a loud warning.
+# Pull the secret key from env so sessions survive restarts.
+# Loud warning + random fallback for local dev only — don't ship without setting this.
 _secret_key = os.environ.get("FLASK_SECRET_KEY")
 if not _secret_key:
     import secrets as _secrets
@@ -39,16 +39,15 @@ if not _secret_key:
 app.secret_key = _secret_key
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-# FIXED: DB path and debug flag were hardcoded. Now loaded from environment.
 DB_PATH: str = os.environ.get("DATABASE_URL", "zerotrust.db")
 DEBUG: bool  = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
 
-# FIXED: mutable set → frozenset (these are constants, not state)
+# frozenset — these are constants, not state
 VALID_STATUSES: frozenset[str]   = frozenset({"active", "closed"})
 VALID_VIEWS: frozenset[str]      = frozenset({"list", "grid", "board", "timeline"})
 VALID_PRIORITIES: frozenset[str] = frozenset({"High", "Medium", "Low"})
 
-# FIXED: seed date stored as ISO 8601 (was 'Dec 5' — not sortable, not parseable)
+# ISO 8601 so it's actually sortable
 SEED_ISSUES: list[tuple] = [
     ("FIG-123", "Task 1", "Project 1", "High", "2024-12-05"),
 ]
@@ -56,19 +55,18 @@ SEED_ISSUES: list[tuple] = [
 
 # ── Custom exceptions ──────────────────────────────────────────────────────────
 class ValidationError(ValueError):
-    """Raised when user-supplied input fails validation rules."""
+    """Bad user input."""
 
 
 # ── Database helpers ───────────────────────────────────────────────────────────
 def get_db() -> sqlite3.Connection:
-    """Open and return a new SQLite connection with Row factory enabled."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db() -> None:
-    """Create tables and seed initial data if the DB is empty."""
+    """Create tables and seed if empty."""
     with get_db() as db:
         db.executescript("""
             CREATE TABLE IF NOT EXISTS users (
@@ -98,25 +96,16 @@ def init_db() -> None:
 
 
 def hash_password(password: str) -> str:
-    """Return a secure bcrypt hash of password via werkzeug.
-
-    FIXED: was hashlib.sha256 with no salt — vulnerable to rainbow table attacks.
-    werkzeug's generate_password_hash uses scrypt/pbkdf2 with a random salt.
-    """
+    """Hash via werkzeug (scrypt/pbkdf2 + random salt)."""
     return generate_password_hash(password)
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    """Return True if password matches the stored hash."""
     return check_password_hash(hashed, password)
 
 
 def build_next_ref(db: sqlite3.Connection) -> str:
-    """Generate the next issue reference string.
-
-    NOTE: COUNT(*)+1 is not atomic under concurrent load.
-    For production use, replace with a dedicated sequence table or DB trigger.
-    """
+    """Generate the next issue ref. Not atomic under concurrency - good enough for now."""
     count = db.execute("SELECT COUNT(*) FROM issues").fetchone()[0]
     return f"FIG-{100 + count + 1}"
 
@@ -126,11 +115,7 @@ def build_issue_query(
     priority: str,
     project: str,
 ) -> tuple[str, list[str]]:
-    """Build a parameterised issues SELECT query from filter arguments.
-
-    Returns:
-        Tuple of (sql_string, params_list) ready for db.execute().
-    """
+    """Build a parameterised SELECT for the issues list based on active filters."""
     sql: str = "SELECT * FROM issues WHERE status=?"
     params: list[str] = [status]
 
@@ -147,7 +132,6 @@ def build_issue_query(
 
 # ── Input validation ───────────────────────────────────────────────────────────
 def validate_email(raw: str) -> str:
-    """Return a normalised email string or raise ValidationError."""
     email = raw.strip().lower()
     if not email:
         raise ValidationError("Email is required.")
@@ -157,7 +141,6 @@ def validate_email(raw: str) -> str:
 
 
 def validate_password(password: str) -> str:
-    """Return password or raise ValidationError if it doesn't meet requirements."""
     if len(password) < 8:
         raise ValidationError("Password must be at least 8 characters.")
     return password
@@ -165,7 +148,7 @@ def validate_password(password: str) -> str:
 
 # ── Auth helpers ───────────────────────────────────────────────────────────────
 def require_login() -> Optional[Response]:
-    """Return a redirect to sign-in if the user is not authenticated, else None."""
+    """Redirect to sign-in if not authed, otherwise return None."""
     if "user_id" not in session:
         return redirect(url_for("signin"))
     return None
@@ -179,7 +162,6 @@ def index() -> Response:
 
 @app.route("/signin", methods=["GET", "POST"])
 def signin():
-    """Authenticate a user and open a session."""
     if request.method == "POST":
         raw_email    = request.form.get("email", "")
         raw_password = request.form.get("password", "")
@@ -195,7 +177,6 @@ def signin():
             return render_template("signin.html")
 
         with get_db() as db:
-            # Fetch by email only; password is verified in constant time below.
             user = db.execute(
                 "SELECT * FROM users WHERE email=?", (email,)
             ).fetchone()
@@ -206,7 +187,7 @@ def signin():
             log.info("User signed in: %s", email)
             return redirect(url_for("dashboard"))
 
-        # Don't distinguish 'email not found' from 'wrong password'.
+        # Same message for bad email or bad password — no enumeration.
         flash("Invalid email or password.", "error")
         log.warning("Failed sign-in attempt for: %s", email)
 
@@ -215,7 +196,6 @@ def signin():
 
 @app.route("/docs")
 def docs():
-    """Render the documentation page."""
     return render_template("docs.html")
 
 
@@ -272,7 +252,7 @@ def dashboard():
     priority = request.args.get("priority", "")
     project  = request.args.get("project",  "")
 
-    # Sanitise against allowlists — never trust user-supplied values for branching logic.
+    # Clamp to known-good values before using in any logic
     if status not in VALID_STATUSES:
         status = "active"
     if view not in VALID_VIEWS:
@@ -336,8 +316,6 @@ def new_issue():
         elif not project:
             flash("Project is required.", "error")
         else:
-            # FIXED: was storing 'Dec 5' format — not sortable, not parseable.
-            # Now stores ISO 8601 with UTC timezone.
             iso_date = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
             with get_db() as db:
                 ref = build_next_ref(db)
@@ -372,6 +350,4 @@ def close_issue(issue_id: int):
 
 if __name__ == "__main__":
     init_db()
-    # FIXED: debug=True was hardcoded — never acceptable in production.
-    # Now controlled by the FLASK_DEBUG environment variable.
     app.run(debug=DEBUG, port=5000, host="0.0.0.0")
