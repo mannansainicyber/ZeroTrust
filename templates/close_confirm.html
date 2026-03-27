@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+FOR LATER 
+{% block content %}
+<div class="anim-fade" style="max-width: 400px; margin: 80px auto; text-align: center; padding: 0 20px;">
+    <div style="background: var(--white); padding: 32px; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow-md);">
+        
+        <div style="width: 48px; height: 48px; background: var(--pri-high-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--pri-high-fg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </div>
+
+        <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Close Issue?</h2>
+        <p style="color: var(--text2); font-size: 14px; line-height: 1.5; margin-bottom: 24px;">
+            Are you sure you want to close <strong>{{ issue.title }}</strong>? This will move it to the archive.
+        </p>
+
+        <form action="{{ url_for('close_issue', issue_id=issue_id) }}" method="POST" style="display: flex; gap: 12px; justify-content: center;">
+            <a href="{{ url_for('dashboard') }}" class="btn" style="flex: 1; justify-content: center;">Keep Open</a>
+            <button type="submit" class="btn btn-primary" style="flex: 1; justify-content: center; background: var(--pri-high-fg); border-color: var(--pri-high-fg);">
+                Close Issue
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

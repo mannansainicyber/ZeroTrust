@@ -18,7 +18,7 @@ app.secret_key = _secret_key
 # -------------------------------------------------------------------
 DEBUG: bool = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)
-app.config["SESSION_COOKIE_SECURE"]      = True
+app.config["SESSION_COOKIE_SECURE"]      = False
 app.config["SESSION_COOKIE_HTTPONLY"]    = True
 
 VALID_STATUSES: frozenset[str] = frozenset({"active", "closed"})
@@ -26,9 +26,10 @@ VALID_VIEWS: frozenset[str]    = frozenset({"list", "grid", "board", "timeline"}
 
 
 limiter = Limiter(
-    app,
-    key_func=get_remote_address,
-    default_limits=["40 per minute"]
+    get_remote_address,  
+    app=app,             
+    default_limits=["40 per minute"],
+    storage_uri="memory://"
 )
 # ------------------------------------------------------------------
 
@@ -216,20 +217,25 @@ def new_issue():
         projects = projects,
     )
 
-
-@app.route("/issues/<int:issue_id>/close", methods=["POST"])
+@app.route("/issues/<int:issue_id>/close", methods=["GET", "POST"])
 def close_issue(issue_id: int):
     redir = require_login()
     if redir:
         return redir
-    with get_db() as conn:
-        conn.execute(
-            "UPDATE issues SET status='closed' WHERE id=? AND owner_id=?",
-            (issue_id, session["user_id"]),
-        )
-        conn.commit()
-    return redirect(url_for("dashboard"))
 
+    if request.method == "POST":
+        
+        with get_db() as conn:
+            conn.execute(
+                "UPDATE issues SET status='closed' WHERE id=? AND owner_id=?",
+                (issue_id, session["user_id"]),
+            )
+            conn.commit()
+        return redirect(url_for("dashboard"))
+
+    
+    return render_template("close_confirm.html", issue_id=issue_id)
+    
 
 if __name__ == "__main__":
     init_db()

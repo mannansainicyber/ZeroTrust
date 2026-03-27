@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="anim-fade" style="max-width: 480px; margin: 40px auto; padding: 0 20px;">
+    <div style="margin-bottom: 24px;">
+        <h2 style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em;">Edit Issue</h2>
+        <p style="color: var(--text2); font-size: 13px;">Update the details for reference <span class="badge b-gray">#{{ issue.ref }}</span></p>
+    </div>
+
+    <form action="{{ url_for('edit_issue', issue_id=issue.id) }}" method="POST" style="background: var(--white); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border); shadow: var(--shadow);">
+        
+        <div class="form-group">
+            <label class="form-label">Issue Title</label>
+            <input type="text" name="title" class="form-input" value="{{ issue.title }}" required autofocus>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Project</label>
+            <input type="text" name="project" class="form-input" value="{{ issue.project }}" list="project-list" required>
+            <datalist id="project-list">
+                {% for p in projects %}<option value="{{ p }}">{% endfor %}
+            </datalist>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select name="priority" class="form-select">
+                <option value="Low" {{ 'selected' if issue.priority == 'Low' }}>Low</option>
+                <option value="Medium" {{ 'selected' if issue.priority == 'Medium' }}>Medium</option>
+                <option value="High" {{ 'selected' if issue.priority == 'High' }}>High</option>
+            </select>
+        </div>
+
+        <div class="form-actions" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border2);">
+            <a href="{{ url_for('dashboard') }}" class="btn">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
