@@ -3,7 +3,7 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 from typing import Optional
-
+from datetime import datetime, timedelta, timezone
 from flask import Flask, Response, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -33,16 +33,13 @@ app.secret_key = _secret_key
 # ── Config ─────────────────────────────────────────────────────────────────────
 DB_PATH: str = os.environ.get("DATABASE_URL", "zerotrust.db")
 DEBUG: bool  = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
-
+PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
 # frozenset — these are constants, not state
 VALID_STATUSES: frozenset[str]   = frozenset({"active", "closed"})
 VALID_VIEWS: frozenset[str]      = frozenset({"list", "grid", "board", "timeline"})
 VALID_PRIORITIES: frozenset[str] = frozenset({"High", "Medium", "Low"})
-
-# ISO 8601 so it's actually sortable
-SEED_ISSUES: list[tuple] = [
-    ("FIG-123", "Task 1", "Project 1", "High", "2024-12-05"),
-]
 
 
 # ── Custom exceptions ──────────────────────────────────────────────────────────
@@ -79,11 +76,6 @@ def init_db() -> None:
                 FOREIGN KEY(owner_id) REFERENCES users(id)
             );
         """)
-        if db.execute("SELECT COUNT(*) FROM issues").fetchone()[0] == 0:
-            db.executemany(
-                "INSERT INTO issues (ref, title, project, priority, date) VALUES (?, ?, ?, ?, ?)",
-                SEED_ISSUES,
-            )
         db.commit()
 
 
@@ -106,10 +98,11 @@ def build_issue_query(
     status: str,
     priority: str,
     project: str,
-) -> tuple[str, list[str]]:
+    owner_id: int,
+) -> tuple[str, list]:
     """Build a parameterised SELECT for the issues list based on active filters."""
-    sql: str = "SELECT * FROM issues WHERE status=?"
-    params: list[str] = [status]
+    sql: str = "SELECT * FROM issues WHERE status=? AND owner_id=?"
+    params: list = [status, owner_id]
 
     if priority and priority in VALID_PRIORITIES:
         sql += " AND priority=?"
@@ -250,17 +243,21 @@ def dashboard():
     if view not in VALID_VIEWS:
         view = "list"
 
+    user_id = session["user_id"]
+
     with get_db() as db:
-        sql, params = build_issue_query(status, priority, project)
+        sql, params = build_issue_query(status, priority, project, user_id)
         issues   = db.execute(sql, params).fetchall()
         projects = [
             r["project"]
             for r in db.execute(
-                "SELECT DISTINCT project FROM issues ORDER BY project"
+                "SELECT DISTINCT project FROM issues WHERE owner_id=? ORDER BY project",
+                (user_id,),
             ).fetchall()
         ]
         active_all = db.execute(
-            "SELECT priority, COUNT(*) as c FROM issues WHERE status='active' GROUP BY priority"
+            "SELECT priority, COUNT(*) as c FROM issues WHERE status='active' AND owner_id=? GROUP BY priority",
+            (user_id,),
         ).fetchall()
 
     counts = {r["priority"]: r["c"] for r in active_all}
@@ -291,7 +288,8 @@ def new_issue():
         projects = [
             r["project"]
             for r in db.execute(
-                "SELECT DISTINCT project FROM issues ORDER BY project"
+                "SELECT DISTINCT project FROM issues WHERE owner_id=? ORDER BY project",
+                (session["user_id"],),
             ).fetchall()
         ]
 
@@ -334,10 +332,13 @@ def close_issue(issue_id: int):
     if redir:
         return redir
     with get_db() as db:
-        db.execute("UPDATE issues SET status='closed' WHERE id=?", (issue_id,))
+        db.execute(
+            "UPDATE issues SET status='closed' WHERE id=? AND owner_id=?",
+            (issue_id, session["user_id"]),
+        )
         db.commit()
     log.info("Issue %d closed by user_id=%d", issue_id, session["user_id"])
-    return redirect(request.referrer or url_for("dashboard"))
+    return redirect(url_for("dashboard"))
 
 
 if __name__ == "__main__":
