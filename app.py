@@ -1,147 +1,31 @@
-import logging
 import os
 import sqlite3
-from datetime import datetime, timezone
-from typing import Optional
 from datetime import datetime, timedelta, timezone
-from flask import Flask, Response, flash, redirect, render_template, request, session, url_for
-from werkzeug.security import check_password_hash, generate_password_hash
 
-# ── Logging ────────────────────────────────────────────────────────────────────
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
-)
-log = logging.getLogger(__name__)
+from flask import Flask, flash, redirect, render_template, request, session, url_for
+from Helpers import *
 
-# ── App ────────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 
-# Pull the secret key from env so sessions survive restarts.
-# Loud warning + random fallback for local dev only — don't ship without setting this.
 _secret_key = os.environ.get("FLASK_SECRET_KEY")
 if not _secret_key:
     import secrets as _secrets
     _secret_key = _secrets.token_hex(32)
-    log.warning(
-        "FLASK_SECRET_KEY not set — using a random key. "
-        "All active sessions will be lost on restart. "
-        "Set FLASK_SECRET_KEY in your environment for production."
-    )
+    print("use secret key bruh i aint joking.")
 app.secret_key = _secret_key
 
-# ── Config ─────────────────────────────────────────────────────────────────────
-DB_PATH: str = os.environ.get("DATABASE_URL", "zerotrust.db")
-DEBUG: bool  = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
-PERMANENT_SESSION_LIFETIME = timedelta(days=7)
-SESSION_COOKIE_SECURE = True
-SESSION_COOKIE_HTTPONLY = True
-# frozenset — these are constants, not state
-VALID_STATUSES: frozenset[str]   = frozenset({"active", "closed"})
-VALID_VIEWS: frozenset[str]      = frozenset({"list", "grid", "board", "timeline"})
-VALID_PRIORITIES: frozenset[str] = frozenset({"High", "Medium", "Low"})
+DEBUG: bool = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)
+app.config["SESSION_COOKIE_SECURE"]      = True
+app.config["SESSION_COOKIE_HTTPONLY"]    = True
+
+VALID_STATUSES: frozenset[str] = frozenset({"active", "closed"})
+VALID_VIEWS: frozenset[str]    = frozenset({"list", "grid", "board", "timeline"})
 
 
-# ── Custom exceptions ──────────────────────────────────────────────────────────
-class ValidationError(ValueError):
-    """Bad user input."""
-
-
-# ── Database helpers ───────────────────────────────────────────────────────────
-def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db() -> None:
-    """Create tables and seed if empty."""
-    with get_db() as db:
-        db.executescript("""
-            CREATE TABLE IF NOT EXISTS users (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                email      TEXT UNIQUE NOT NULL,
-                password   TEXT NOT NULL,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE TABLE IF NOT EXISTS issues (
-                id       INTEGER PRIMARY KEY AUTOINCREMENT,
-                ref      TEXT NOT NULL,
-                title    TEXT NOT NULL,
-                project  TEXT NOT NULL,
-                priority TEXT NOT NULL,
-                date     TEXT NOT NULL,
-                owner_id INTEGER,
-                status   TEXT DEFAULT 'active',
-                FOREIGN KEY(owner_id) REFERENCES users(id)
-            );
-        """)
-        db.commit()
-
-
-def hash_password(password: str) -> str:
-    """Hash via werkzeug (scrypt/pbkdf2 + random salt)."""
-    return generate_password_hash(password)
-
-
-def verify_password(password: str, hashed: str) -> bool:
-    return check_password_hash(hashed, password)
-
-
-def build_next_ref(db: sqlite3.Connection) -> str:
-    """Generate the next issue ref. Not atomic under concurrency - good enough for now."""
-    count = db.execute("SELECT COUNT(*) FROM issues").fetchone()[0]
-    return f"FIG-{100 + count + 1}"
-
-
-def build_issue_query(
-    status: str,
-    priority: str,
-    project: str,
-    owner_id: int,
-) -> tuple[str, list]:
-    """Build a parameterised SELECT for the issues list based on active filters."""
-    sql: str = "SELECT * FROM issues WHERE status=? AND owner_id=?"
-    params: list = [status, owner_id]
-
-    if priority and priority in VALID_PRIORITIES:
-        sql += " AND priority=?"
-        params.append(priority)
-
-    if project:
-        sql += " AND project=?"
-        params.append(project)
-
-    return sql + " ORDER BY id DESC", params
-
-
-# ── Input validation ───────────────────────────────────────────────────────────
-def validate_email(raw: str) -> str:
-    email = raw.strip().lower()
-    if not email:
-        raise ValidationError("Email is required.")
-    if "@" not in email or "." not in email.split("@")[-1]:
-        raise ValidationError("Please enter a valid email address.")
-    return email
-
-
-def validate_password(password: str) -> str:
-    if len(password) < 8:
-        raise ValidationError("Password must be at least 8 characters.")
-    return password
-
-
-# ── Auth helpers ───────────────────────────────────────────────────────────────
-def require_login() -> Optional[Response]:
-    """Redirect to sign-in if not authed, otherwise return None."""
-    if "user_id" not in session:
-        return redirect(url_for("signin"))
-    return None
-
-
-# ── Routes ─────────────────────────────────────────────────────────────────────
 @app.route("/")
-def index() -> Response:
+def index():
     return redirect(url_for("dashboard") if "user_id" in session else url_for("signin"))
 
 
@@ -161,20 +45,18 @@ def signin():
             flash("Please enter your password.", "error")
             return render_template("signin.html")
 
-        with get_db() as db:
-            user = db.execute(
+        with get_db() as conn:
+            user = conn.execute(
                 "SELECT * FROM users WHERE email=?", (email,)
             ).fetchone()
 
         if user and verify_password(raw_password, user["password"]):
+            session.permanent     = True
             session["user_id"]    = user["id"]
             session["user_email"] = user["email"]
-            log.info("User signed in: %s", email)
             return redirect(url_for("dashboard"))
 
-        # Same message for bad email or bad password — no enumeration.
         flash("Invalid email or password.", "error")
-        log.warning("Failed sign-in attempt for: %s", email)
 
     return render_template("signin.html")
 
@@ -198,31 +80,27 @@ def signup():
             return render_template("signup.html")
 
         try:
-            with get_db() as db:
-                db.execute(
+            with get_db() as conn:
+                conn.execute(
                     "INSERT INTO users (email, password) VALUES (?, ?)",
                     (email, hash_password(password)),
                 )
-                db.commit()
-                user = db.execute(
+                conn.commit()
+                user = conn.execute(
                     "SELECT * FROM users WHERE email=?", (email,)
                 ).fetchone()
                 session["user_id"]    = user["id"]
                 session["user_email"] = email
-            log.info("New user registered: %s", email)
             return redirect(url_for("dashboard"))
         except sqlite3.IntegrityError:
             flash("An account with this email already exists.", "error")
-            log.warning("Duplicate signup attempt for: %s", email)
 
     return render_template("signup.html")
 
 
 @app.route("/signout")
 def signout():
-    email = session.get("user_email", "unknown")
     session.clear()
-    log.info("User signed out: %s", email)
     return redirect(url_for("signin"))
 
 
@@ -237,7 +115,6 @@ def dashboard():
     priority = request.args.get("priority", "")
     project  = request.args.get("project",  "")
 
-    # Clamp to known-good values before using in any logic
     if status not in VALID_STATUSES:
         status = "active"
     if view not in VALID_VIEWS:
@@ -245,17 +122,17 @@ def dashboard():
 
     user_id = session["user_id"]
 
-    with get_db() as db:
+    with get_db() as conn:
         sql, params = build_issue_query(status, priority, project, user_id)
-        issues   = db.execute(sql, params).fetchall()
-        projects = [
+        issues     = conn.execute(sql, params).fetchall()
+        projects   = [
             r["project"]
-            for r in db.execute(
+            for r in conn.execute(
                 "SELECT DISTINCT project FROM issues WHERE owner_id=? ORDER BY project",
                 (user_id,),
             ).fetchall()
         ]
-        active_all = db.execute(
+        active_all = conn.execute(
             "SELECT priority, COUNT(*) as c FROM issues WHERE status='active' AND owner_id=? GROUP BY priority",
             (user_id,),
         ).fetchall()
@@ -284,10 +161,10 @@ def new_issue():
     if redir:
         return redir
 
-    with get_db() as db:
+    with get_db() as conn:
         projects = [
             r["project"]
-            for r in db.execute(
+            for r in conn.execute(
                 "SELECT DISTINCT project FROM issues WHERE owner_id=? ORDER BY project",
                 (session["user_id"],),
             ).fetchall()
@@ -307,15 +184,14 @@ def new_issue():
             flash("Project is required.", "error")
         else:
             iso_date = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
-            with get_db() as db:
-                ref = build_next_ref(db)
-                db.execute(
+            with get_db() as conn:
+                ref = build_next_ref(conn)
+                conn.execute(
                     "INSERT INTO issues (ref, title, project, priority, date, owner_id) "
                     "VALUES (?, ?, ?, ?, ?, ?)",
                     (ref, title, project, priority, iso_date, session["user_id"]),
                 )
-                db.commit()
-            log.info("Issue created: %s — '%s'", ref, title)
+                conn.commit()
             flash("Issue created.", "success")
             return redirect(url_for("dashboard"))
 
@@ -331,13 +207,12 @@ def close_issue(issue_id: int):
     redir = require_login()
     if redir:
         return redir
-    with get_db() as db:
-        db.execute(
+    with get_db() as conn:
+        conn.execute(
             "UPDATE issues SET status='closed' WHERE id=? AND owner_id=?",
             (issue_id, session["user_id"]),
         )
-        db.commit()
-    log.info("Issue %d closed by user_id=%d", issue_id, session["user_id"])
+        conn.commit()
     return redirect(url_for("dashboard"))
 
 
