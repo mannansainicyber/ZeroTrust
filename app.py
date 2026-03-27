@@ -1,11 +1,3 @@
-"""
-ZeroTrust - Flask issue-tracker backend.
-
-Environment variables:
-    FLASK_SECRET_KEY   Required in production — hex string for session signing.
-    DATABASE_URL       SQLite file path (default: zerotrust.db).
-    FLASK_DEBUG        Set 'true' to enable debug mode (default: false).
-"""
 import logging
 import os
 import sqlite3
