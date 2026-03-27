@@ -1,10 +1,12 @@
 import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
-
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 from Helpers import *
 
+# ------------------------------------------------------------------
 app = Flask(__name__)
 
 _secret_key = os.environ.get("FLASK_SECRET_KEY")
@@ -13,9 +15,8 @@ if not _secret_key:
     _secret_key = _secrets.token_hex(32)
     print("use secret key bruh i aint joking.")
 app.secret_key = _secret_key
-
+# -------------------------------------------------------------------
 DEBUG: bool = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
-
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)
 app.config["SESSION_COOKIE_SECURE"]      = True
 app.config["SESSION_COOKIE_HTTPONLY"]    = True
@@ -24,12 +25,25 @@ VALID_STATUSES: frozenset[str] = frozenset({"active", "closed"})
 VALID_VIEWS: frozenset[str]    = frozenset({"list", "grid", "board", "timeline"})
 
 
+limiter = Limiter(
+    app,
+    key_func=get_remote_address,
+    default_limits=["40 per minute"]
+)
+# ------------------------------------------------------------------
+
+@app.template_filter("fmtdate")
+def fmtdate(val):
+    return datetime.strptime(val, "%Y-%m-%d").strftime("%b %d")
+
+
 @app.route("/")
 def index():
     return redirect(url_for("dashboard") if "user_id" in session else url_for("signin"))
 
 
 @app.route("/signin", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def signin():
     if request.method == "POST":
         raw_email    = request.form.get("email", "")
@@ -67,6 +81,7 @@ def docs():
 
 
 @app.route("/signup", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def signup():
     if request.method == "POST":
         raw_email    = request.form.get("email", "")

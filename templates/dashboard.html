@@ -229,7 +229,7 @@
               <td><span class="col-title">{{ issue.title }}</span></td>
               <td>{{ project_badge(issue.project) }}</td>
               <td>{{ priority_pill(issue.priority) }}</td>
-              <td><span class="date-cell">{{ issue.date }}</span></td>
+              <td><span class="date-cell">{{ issue.date | fmtdate}}</span></td>
               <td>
                 <div class="avatar">
                   {% if issue.owner_id %}{{ email[0]|upper if email else '?' }}{% else %}?{% endif %}
@@ -268,7 +268,7 @@
             <div class="card-foot">
               <span class="col-ref">{{ issue.ref }}</span>
               <div style="display:flex;align-items:center;gap:8px;">
-                <span class="date-cell">{{ issue.date }}</span>
+                <span class="date-cell">{{ issue.date | fmtdate }}</span>
                 {% if current_status == 'active' %}
                 <div class="card-actions">{{ close_btn(issue.id) }}</div>
                 {% endif %}
@@ -369,10 +369,10 @@
           {% set seen_dates = namespace(dates=[]) %}
           {% for issue in issues %}
             {% if issue.date not in seen_dates.dates %}
-              {% set _ = seen_dates.dates.append(issue.date) %}
+              {% set _ = seen_dates.dates.append(issue.date | fmtdate) %}
               {% if not loop.first %}</div>{% endif %}
               <div class="timeline-group">
-              <div class="timeline-date-label">{{ issue.date }}</div>
+              <div class="timeline-date-label">{{ issue.date | fmtdate }}</div>
             {% endif %}
             <div class="timeline-item">
               <span class="timeline-dot" style="background:
